@@ -1,0 +1,158 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    @* <link href="https://fonts.googleapis.com/css?family=Roboto:300,400&display=swap" rel="stylesheet"> *@
+
+
+<style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fd;
+            margin: 0;
+            padding: 0;
+        }
+
+        .half {
+            display: flex;
+            height: 100vh;
+        }
+
+        .bg {
+            flex: 1;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .contents {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fd;
+        }
+
+        h3 {
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+            h3 strong {
+                font-weight: 700;
+            }
+
+        p {
+            color: #b0b0b0;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-control {
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            padding: 10px 10px;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background: #f86d18;
+            border: none;
+            color: white;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+            .btn-primary:hover {
+                background: #d55b0e;
+            }
+
+        .control--checkbox {
+            position: relative;
+            padding-left: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            user-select: none;
+            color: #666;
+        }
+
+            .control--checkbox input {
+                position: absolute;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+        .control__indicator {
+            position: absolute;
+            top: 2px;
+            left: 0;
+            height: 15px;
+            width: 15px;
+            background-color: #eee;
+            border-radius: 3px;
+        }
+
+        .control--checkbox input:checked ~ .control__indicator {
+            background-color: #f86d18;
+        }
+
+        .forgot-pass {
+            font-size: 14px;
+            color: #666;
+            text-decoration: underline;
+        }
+
+        .ml-auto {
+            margin-left: auto;
+        }
+        label{
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+</style>
+
+    <title>Login #2</title>
+</head>
+<body>
+
+
+    <div class="d-lg-flex half">
+        <div class="contents order-2 order-md-1">
+
+            <div class="container" >
+                <div class="row align-items-center justify-content-center">
+                    <div class="col-md-7">
+                        <h2>Đăng nhập hệ thống</h2>
+                        <form action="#" method="post">
+                            <div class="form-group first">
+                                <label for="username">Tài khoản</label>
+                                <input type="text" class="form-control" id="username">
+                            </div>
+                            <div class="form-group last mb-3">
+                                <label for="password">Mật khẩu</label>
+                                <input type="password" class="form-control" placeholder="********" id="password">
+                            </div>
+
+                            <input style="cursor:pointer" type="submit" value="Đăng nhập" class="btn btn-block btn-primary">
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg order-1 order-md-2" style="background-image: url('image/bg_1.jpg');"></div>
+
+
+    </div>
+
+
+
+</body>
+</html>
