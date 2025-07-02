@@ -1,0 +1,210 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách người dùng</title>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.4/css/dataTables.dataTables.min.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/2.1.4/js/dataTables.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table.dataTable {
+            width: 100% !important;
+            border-collapse: collapse;
+            border: 1px solid #dee2e6;
+        }
+
+            table.dataTable th, table.dataTable td {
+                border: 1px solid #dee2e6;
+                padding: 8px;
+                text-align: center !important;
+            }
+
+        th:nth-child(1), td:nth-child(1) {
+            width: 10%;
+        }
+        /* STT */
+        th:nth-child(2), td:nth-child(2) {
+            width: 40%;
+        }
+        /* Tên người dùng */
+        th:nth-child(3), td:nth-child(3) {
+            width: 20%;
+        }
+        /* Điểm */
+        th:nth-child(4), td:nth-child(4) {
+            width: 30%;
+        }
+        /* Thao tác */
+    </style>
+</head>
+<body>
+    <h2>Danh Sách Người Dùng</h2>
+    <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#userModal" onclick="openAddUserModal()">Thêm Người Dùng</button>
+    <table id="userTable" class="display">
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Tên Người Dùng</th>
+                <th>Điểm</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <!-- Modal for Add/Edit User -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userModalLabel">Thêm/Chỉnh Sửa Người Dùng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <div class="mb-3">
+                            <label for="userName" class="form-label">Tên Người Dùng</label>
+                            <input type="text" class="form-control" id="userName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userScore" class="form-label">Điểm</label>
+                            <input type="number" class="form-control" id="userScore" required>
+                        </div>
+                        <input type="hidden" id="userIndex">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            // Dữ liệu mẫu
+            let userData = [
+                { name: "Nguyễn Văn A", score: 85 },
+                { name: "Trần Thị B", score: 92 },
+                { name: "Lê Văn C", score: 78 },
+                { name: "Phạm Thị D", score: 95 },
+                { name: "Hoàng Văn E", score: 88 }
+            ];
+
+            // Khởi tạo DataTable
+            const table = $('#userTable').DataTable({
+                data: userData,
+                columns: [
+                    {
+                        data: null,
+                        render: function (data, type, row, meta) {
+                            return meta.row + 1; // Tự động đánh số thứ tự
+                        }
+                    },
+                    { data: 'name' },
+                    { data: 'score' },
+                    {
+                        data: null,
+                        render: function (data, type, row, meta) {
+                            return `
+                                        <button class="btn btn-sm btn-warning" onclick="openEditUserModal(${meta.row})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${meta.row})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    `;
+                        }
+                    }
+                ],
+                language: {
+                    "decimal": "",
+                    "emptyTable": "Không có dữ liệu",
+                    "info": "Hiển thị _START_ đến _END_ của _TOTAL_ bản ghi",
+                    "infoEmpty": "Hiển thị 0 đến 0 của 0 bản ghi",
+                    "infoFiltered": "(lọc từ _MAX_ bản ghi)",
+                    "infoPostFix": "",
+                    "thousands": ",",
+                    "lengthMenu": "Hiển thị _MENU_ bản ghi",
+                    "loadingRecords": "Đang tải...",
+                    "processing": "Đang xử lý...",
+                    "search": "Tìm kiếm:",
+                    "zeroRecords": "Không tìm thấy bản ghi nào",
+                    "paginate": {
+                        "first": "<<",
+                        "last": ">>",
+                        "next": ">",
+                        "previous": "<"
+                    }
+                }
+            });
+
+            // Hàm mở modal để thêm người dùng
+            window.openAddUserModal = function () {
+                $('#userModalLabel').text('Thêm Người Dùng');
+                $('#userForm')[0].reset();
+                $('#userIndex').val('');
+            };
+
+            // Hàm mở modal để chỉnh sửa người dùng
+            window.openEditUserModal = function (index) {
+                $('#userModalLabel').text('Chỉnh Sửa Người Dùng');
+                const user = userData[index];
+                $('#userName').val(user.name);
+                $('#userScore').val(user.score);
+                $('#userIndex').val(index);
+                $('#userModal').modal('show');
+            };
+
+            // Hàm lưu người dùng (thêm hoặc chỉnh sửa)
+            window.saveUser = function () {
+                const name = $('#userName').val();
+                const score = parseInt($('#userScore').val());
+                const index = $('#userIndex').val();
+
+                if (!name || !score) {
+                    alert('Vui lòng điền đầy đủ thông tin!');
+                    return;
+                }
+
+                if (index === '') {
+                    // Thêm mới
+                    userData.push({ name, score });
+                } else {
+                    // Cập nhật
+                    userData[index] = { name, score };
+                }
+
+                // Cập nhật DataTable
+                table.clear().rows.add(userData).draw();
+                $('#userModal').modal('hide');
+            };
+
+            // Hàm xóa người dùng
+            window.deleteUser = function (index) {
+                if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
+                    userData.splice(index, 1);
+                    table.clear().rows.add(userData).draw();
+                }
+            };
+        });
+    </script>
+</body>
+</html>

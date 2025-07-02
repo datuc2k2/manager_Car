@@ -25,5 +25,4 @@ CREATE TABLE [transaction] (
     calendar2 NVARCHAR(500)
 );
 
-select * from [transaction];
 
