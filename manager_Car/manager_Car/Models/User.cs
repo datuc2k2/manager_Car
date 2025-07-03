@@ -9,5 +9,5 @@ public partial class User
 
     public string Name { get; set; } = null!;
 
-    public int Point { get; set; }
+    public decimal Point { get; set; }
 }

@@ -61,32 +61,32 @@
 
     <!-- Modal -->
     <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Lịch sử lịch gần đây </h5>
+                    <h5 class="modal-title" id="exampleModalLabel">Lịch sử giao dịch của <span id="nameUser" style="color:#0dcaf0"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" id="historyContent">
-                    <p><strong>[ <span id="nameUser" style="color:#0dcaf0"> A Luân</span> ]</strong></p>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label for="historyFromDate" class="form-label">Từ ngày:</label>
+                            <input type="date" class="form-control" id="historyFromDate">
+                        </div>
+                        <div class="col-md-5">
+                            <label for="historyToDate" class="form-label">Đến ngày:</label>
+                            <input type="date" class="form-control" id="historyToDate">
+                        </div>
+                        <div class="col-md-2" style="margin-top: 32px">
+                            <button type="button" class="btn btn-info" id="applyHistoryFilterBtn" title="Áp dụng bộ lọc">
+                                <i class="bi bi-funnel-fill"></i>
+                            </button>
+                        </div>
 
-                    <!-- Chốt điểm -->
-                    <p> <span class="text-warning "> >></span> Chốt điểm đến 23h59 ngày 01/07/2025 : <span class="text-warning fw-bold">1.5 đ</span></p>
-                    <p> <span class="text-warning "> >></span> Chốt điểm đến 23h59 ngày 14/06/2025 : <span class="text-warning fw-bold">1.5 đ</span></p>
-
-                    <!-- Lịch chi tiết -->
-                    <div class="border rounded p-2 mb-3">
-                        <p class="mb-1"><strong>14/06/2025</strong> &nbsp; <span class="text-primary fw-bold">+0.5</span></p>
-                        <p class="mb-1"><strong>Nhận sân</strong> - <strong>Lâm Vũ</strong></p>
-                        <p class="text-muted mb-0">San  Luân 0,5d ktly</p>
                     </div>
 
-                    <p> <span class="text-warning "> >></span> Chốt điểm đến 23h59 ngày 13/06/2025 : <span class="text-warning fw-bold">1 đ</span></p>
-
-                    <div class="border rounded p-2 mb-3">
-                        <p class="mb-1"><strong>13/06/2025</strong> &nbsp; <span class="text-danger fw-bold">-0.5</span></p>
-                        <p class="mb-1"><strong>Nhận lịch</strong> - <strong>Lâm Vũ</strong></p>
-                        <p class="text-muted mb-0">Ycau carnival 7s tiến tới nay 22h greenpark yên hoà sau đó qua 381 nguyễn khang ck450 0,5</p>
+                    <hr> <div id="historyContent" style="max-height: 400px; overflow-y: auto;">
+                        <p>Đang tải lịch sử...</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -96,123 +96,318 @@
         </div>
     </div>
 
+    <h3>📤 Tải lên tệp Excel</h3>
+
+    <div class="mb-3">
+        <input type="file" id="excelFile" class="form-control" accept=".xlsx,.xls">
+    </div>
+
+    <button id="uploadBtn" class="btn btn-primary">📁 Upload Excel</button>
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorModalLabel">Lỗi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body" id="errorModalBody">
+                    <!-- danh sách người dùng sẽ hiện ở đây -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let table;
+
         $(document).ready(function () {
-            // Call api import excel
             $('#uploadBtn').click(function () {
-                var fileInput = $('#excelFile')[0];
-                var file = fileInput.files[0];
+            const fileInput = $('#excelFile')[0];
+            const file = fileInput.files[0];
 
-                if (!file) {
-                    alert('Please choose a file!');
-                    return;
+            if (!file) {
+                alert('Vui lòng chọn tệp Excel!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            $.ajax({
+                url: "/api/Manager/import-transactions",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    showToast("✅ Thành công", response, "success");
+                },
+                error: function (xhr) {
+                    const errorMsg = xhr.responseText || "Lỗi không xác định";
+                    if (errorMsg.includes("do not exist") || errorMsg.includes("không tồn tại")) {
+                        const users = extractUserListFromError(errorMsg);
+                        showErrorModal("Các người dùng không tồn tại:", users);
+                    } else {
+                        showToast("❌ Lỗi", errorMsg, "danger");
+                    }
                 }
-
-                var formData = new FormData();
-                formData.append("file", file);
-
-                $.ajax({
-                    url: "/api/Manager/import-transactions",
-                    type: "POST",
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function (response) {
-                        $('#uploadResult').html('<span style="color:green;">✅ Success: ' + response + '</span>');
-                    },
-                    error: function (xhr) {
-                        $('#uploadResult').html('<span style="color:red;">❌ Error: ' + xhr.responseText + '</span>');
-                    }
-                });
             });
-
-            $('#inputDate').datepicker({
-                format: 'dd/mm/yyyy',
-                autoclose: true,
-                language: 'vi', // Vietnamese localization
-                todayHighlight: true
-            }).on('changeDate', function (e) {
-                // Update chotDiemDate span with the selected date
-                const selectedDate = e.format('dd/mm/yyyy');
-                $('#chotDiemDate').text(selectedDate);
-            });
-            // Tính ngày chốt điểm (hôm nay - 1 ngày)
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
-            const formattedDate = `${yesterday.getDate().toString().padStart(2, '0')}/${(yesterday.getMonth() + 1).toString().padStart(2, '0')}/${yesterday.getFullYear()}`;
-            $('#chotDiemDate').text(formattedDate);
-
-            // Dữ liệu giả lập
-            const data = [
-                { name: "A A Quang Xe", points: 0, reward: "0K", id: 1828 },
-                { name: "A Erik Nguyễn", points: 3, reward: "420K", id: 1829 },
-                { name: "A Huy", points: 0, reward: "0K", id: 1830 },
-                { name: "A Luân", points: 1.5, reward: "210K", id: 1831 },
-                { name: "A Nghiệm Thành Đạt", points: 0, reward: "0K", id: 1832 },
-                { name: "A Tóc Suông Lủi", points: 31.25, reward: "4375K", id: 1833 },
-                { name: "A Đức Airpot", points: 1, reward: "140K", id: 1834 },
-                { name: "ABC", points: 6.5, reward: "910K", id: 1835 },
-                { name: "Ae Chạy Xe Sáng Và Đường Dài", points: 8.5, reward: "1190K", id: 1836 },
-                { name: "Ah Quang", points: 13.25, reward: "1855K", id: 1837 },
-                { name: "Airport Car Operator", points: 1.5, reward: "210K", id: 1838 }
-            ];
-
-            // Khởi tạo DataTable với dữ liệu
-            const table = $('#darkNightTable').DataTable({
-                language: {
-                        "decimal": "",
-                        "emptyTable": "Không có dữ liệu",
-                        "info": "Hiển thị _START_ đến _END_ của _TOTAL_ bản ghi",
-                        "infoEmpty": "Hiển thị 0 đến 0 của 0 bản ghi",
-                        "infoFiltered": "(lọc từ _MAX_ bản ghi)",
-                        "infoPostFix": "",
-                        "thousands": ",",
-                        "lengthMenu": "Hiển thị _MENU_ bản ghi",
-                        "loadingRecords": "Đang tải...",
-                        "processing": "Đang xử lý...",
-                        "search": "Tìm kiếm:",
-                        "zeroRecords": "Không tìm thấy bản ghi nào",
-                        "paginate": {
-                            "first": "<<",
-                            "last": ">>",
-                            "next": ">",
-                            "previous": "<"
-                        }
-                    },
-                data: data,
-                columns: [
-                    {
-                        data: null,
-                        render: function (data, type, row, meta) {
-                            return meta.row + 1; // Tự động đánh số thứ tự
-                        }
-                    },
-                    { data: "name" },
-                    { data: "points" },
-                    { data: "reward" },
-                    {
-                        data: null,
-                        render: function (data, type, row) {
-                            const nameEscaped = data.name.replace(/'/g, "\\'");
-                            return `<button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="showHistory(${data.id}, '${nameEscaped}');"><span style="color:white"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"></path><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"></path></svg></span></button>`;
-                        }
-                    }
-                ],
-                paging: true,
-                searching: true,
-                info: false
-            });
-
-            window.showHistory = function (id,name) {
-                // const historyData = `Lịch sử cho ${name}: Dữ liệu giả lập - [Thời gian: ${formattedDate}, Điểm: 5, Ghi chú: Hoàn thành].`;
-                // $('#historyContent').text(historyData);
-                document.getElementById('nameUser').textContent = name;
-                $('#exampleModal').modal('show');
-            };
         });
-     
-      
+
+        function extractUserListFromError(msg) {
+            const parts = msg.split(":");
+            if (parts.length > 1) {
+                return parts[1].split(",").map(name => name.trim());
+            }
+            return [msg];
+        }
+
+        window.showToast = (title, message, type) => {
+            const toast = $(`
+                <div class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>${title}</strong><br>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+
+            $('#toastContainer').append(toast);
+            toast.toast('show');
+
+            // Remove toast from DOM after it hides
+            toast.on('hidden.bs.toast', function () {
+                toast.remove();
+            });
+        }
+
+        function showErrorModal(title, userList) {
+            $('#errorModalLabel').text(title);
+            const content = userList.map(u => `<li>${u}</li>`).join('');
+            $('#errorModalBody').html(`<ul>${content}</ul>`);
+            $('#errorModal').modal('show');
+        }
+
+
+            fetchUsers();
+        });
+
+        function fetchUsers() {
+            $.ajax({
+                url: "/api/UserQuery/getUsers",
+                method: "GET",
+                success: function (data) {
+                    // Map user data to expected structure
+                    const tableData = data.map((user, index) => ({
+                        id: user.id,
+                        name: user.name,
+                        points: user.point,
+                        reward: user.point * 150000
+                    }));
+
+                    // Initialize or refresh DataTable
+                    if ($.fn.DataTable.isDataTable('#darkNightTable')) {
+                        table.clear().rows.add(tableData).draw();
+                    } else {
+                        table = $('#darkNightTable').DataTable({
+                            language: {
+                                "decimal": "",
+                                "emptyTable": "Không có dữ liệu",
+                                "info": "Hiển thị _START_ đến _END_ của _TOTAL_ bản ghi",
+                                "infoEmpty": "Hiển thị 0 đến 0 của 0 bản ghi",
+                                "infoFiltered": "(lọc từ _MAX_ bản ghi)",
+                                "thousands": ",",
+                                "lengthMenu": "Hiển thị _MENU_ bản ghi",
+                                "loadingRecords": "Đang tải...",
+                                "processing": "Đang xử lý...",
+                                "search": "Tìm kiếm:",
+                                "zeroRecords": "Không tìm thấy bản ghi nào",
+                                "paginate": {
+                                    "first": "<<",
+                                    "last": ">>",
+                                    "next": ">",
+                                    "previous": "<"
+                                }
+                            },
+                            data: tableData,
+                            columns: [
+                                {
+                                    data: null,
+                                    render: function (data, type, row, meta) {
+                                        return meta.row + 1; // STT
+                                    }
+                                },
+                                { data: "name" },
+                                { data: "points" },
+                                {
+                                    data: "reward",
+                                    render: function (data) {
+                                        return `${data.toLocaleString('vi-VN')} đ`;
+                                    }
+                                },
+                                {
+                                    data: null,
+                                    render: function (data) {
+                                        const nameEscaped = data.name.replace(/'/g, "\\'");
+                                        return `
+                                            <button onclick="showHistory(${data.id}, '${nameEscaped}')" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                                                <span style="color:white">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                                                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"></path>
+                                                        <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"></path>
+                                                    </svg>
+                                                </span>
+                                            </button>`;
+                                    }
+                                }
+                            ],
+                            paging: true,
+                            searching: true,
+                            info: false
+                        });
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert("Lỗi khi tải danh sách người dùng: " + error);
+                }
+            });
+        }
+
+        let u_name = '', u_id = 0;
+
+        function showHistory(userId, userName) {
+            u_id = userId;
+            u_name = userName;
+            // Set the user name in the modal title
+            $("#nameUser").text(userName);
+
+            // Clear previous content and show loading message
+            $("#historyContent").html("<p>Đang tải lịch sử...</p>");
+
+            // **Important:** Do NOT get dates from #inputDate here directly for the AJAX call.
+            // The dates will now come from the modal's input fields.
+            // Instead, simply show the modal.
+            $('#exampleModal').modal('show');
+
+            // Automatically load history when the modal is shown
+            // We'll call a dedicated function to load history that reads from modal's date inputs
+            // Call it immediately with default/pre-filled dates (if any)
+            loadHistoryData(userId, userName);
+        }
+
+        // Function to load history data based on current modal filter settings
+        function loadHistoryData(userId, userName) {
+            $("#historyContent").html("<p>Đang tải lịch sử...</p>"); // Show loading state
+
+            // Get dates from the modal's input fields
+            const fromDateVal = $('#historyFromDate').val();
+            const toDateVal = $('#historyToDate').val();
+
+            // Construct date parameters for API
+            const params = new URLSearchParams({ userId });
+
+            // Only append if dates are actually selected
+            if (fromDateVal) {
+                params.append("fromDate", `${fromDateVal}T00:00:00`);
+            }
+            if (toDateVal) {
+                params.append("toDate", `${toDateVal}T23:59:59`);
+            }
+
+            $.ajax({
+                url: `/api/UserQuery/getUserTransactionsById?${params.toString()}`,
+                method: "GET",
+                success: function (data) {
+                    if (data.length === 0) {
+                        $("#historyContent").html("<p>Không có lịch sử giao dịch trong khoảng thời gian đã chọn.</p>");
+                        return;
+                    }
+
+                    let html = ''; // Start with an empty string as the user name is in the title
+
+                    // Display each transaction
+                    data.forEach(tran => {
+                        const isSender = tran.proposeUsername === userName;
+                        const amount = isSender ? tran.point : -tran.point;
+
+                        const pointText = amount > 0
+                            ? `<span class="text-primary fw-bold">+${amount}</span>`
+                            : `<span class="text-danger fw-bold">${amount}</span>`;
+
+                        const counterParty = isSender ? tran.receiveUsername : tran.proposeUsername;
+
+                        // Format datetime to Vietnamese locale
+                        const transactionDateTime = new Date(tran.dateTime).toLocaleString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false // Use 24-hour format
+                        });
+
+                        html += `
+                            <div class="border rounded p-2 mb-3">
+                                <p class="mb-1"><strong>${transactionDateTime}</strong> &nbsp; ${pointText}</p>
+                                <p class="mb-1"><strong>${isSender ? 'Chuyển cho' : 'Nhận từ'}:</strong> ${counterParty}</p>
+                                <p class="mb-1"><strong class="text-success">Mô tả 1:</strong> ${tran.calendar1 || '[Không có]'}</p>
+                                <p class="mb-1"><strong class="text-danger">Mô tả 2:</strong> ${tran.calendar2 || '[Không có]'}</p>
+                            </div>`;
+                    });
+
+                    $("#historyContent").html(html);
+                },
+                error: function () {
+                    $("#historyContent").html("<p class='text-danger'>Lỗi khi tải dữ liệu lịch sử.</p>");
+                }
+            });
+        }
+
+        // Event listener for the "Apply Filter" button inside the modal
+        $(document).on('click', '#applyHistoryFilterBtn', function() {
+            // Get the userId and userName that was last used to open the modal
+            // You might need to store these in data attributes or a global variable if they're not always present
+            const currentUserId = u_id; // Assuming you set this when opening the modal
+            const currentUserName = u_name;
+            if (currentUserId && currentUserName) {
+                loadHistoryData(currentUserId, currentUserName);
+            } else {
+                // Handle case where userId/userName is not available (shouldn't happen if flow is correct)
+                showToast("Lỗi", "Không tìm thấy thông tin người dùng để áp dụng bộ lọc.", "danger");
+            }
+        });
+
+        // Event listener for when the modal is shown to set initial data attributes
+        // This is crucial to pass userId to the applyHistoryFilterBtn click handler
+        $('#exampleModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget); // Button that triggered the modal
+            const userId = button.data('user-id'); // Extract info from data-* attributes
+            const userName = button.data('user-name');
+            console.log('userId: ',userId)
+            if (userId && userName) {
+                $(this).data('user-id', userId); // Store user-id in the modal's data
+                $(this).data('user-name', userName); // Store user-name in the modal's data
+                $("#nameUser").text(userName); // Set the name
+
+                // You can also pre-fill dates here if you want
+                // For example, set default to current month
+                const today = new Date();
+                const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+                const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+                $('#historyFromDate').val(firstDayOfMonth);
+                $('#historyToDate').val(lastDayOfMonth);
+
+                // Load data initially when modal opens
+                loadHistoryData(userId, userName);
+            }
+        });
+
     </script>
+
 </body>
 </html>

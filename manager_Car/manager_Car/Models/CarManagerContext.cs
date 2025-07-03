@@ -27,7 +27,7 @@ public partial class CarManagerContext : DbContext
     {
         modelBuilder.Entity<Transaction>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__transact__3213E83F51BA8CB7");
+            entity.HasKey(e => e.Id).HasName("PK__transact__3213E83FAA1FA01B");
 
             entity.ToTable("transaction");
 
@@ -43,7 +43,7 @@ public partial class CarManagerContext : DbContext
                 .HasColumnType("datetime")
                 .HasColumnName("date_time");
             entity.Property(e => e.Point)
-                .HasColumnType("decimal(18, 0)")
+                .HasColumnType("decimal(10, 2)")
                 .HasColumnName("point");
             entity.Property(e => e.ProposeUsername)
                 .HasMaxLength(100)
@@ -55,7 +55,7 @@ public partial class CarManagerContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__user__3213E83F6F3BF63C");
+            entity.HasKey(e => e.Id).HasName("PK__user__3213E83F11DFD98E");
 
             entity.ToTable("user");
 
@@ -63,7 +63,9 @@ public partial class CarManagerContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(100)
                 .HasColumnName("name");
-            entity.Property(e => e.Point).HasColumnName("point");
+            entity.Property(e => e.Point)
+                .HasColumnType("decimal(10, 2)")
+                .HasColumnName("point");
         });
 
         OnModelCreatingPartial(modelBuilder);
