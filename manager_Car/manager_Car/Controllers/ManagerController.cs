@@ -157,7 +157,5 @@ namespace manager_Car.Controllers
             return finalDateTime;
         }
 
-
-
     }
 }

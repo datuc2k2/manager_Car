@@ -36,13 +36,7 @@
                 - Mua điểm ib zalo <a href="https://id.zalo.me/account?continue=https://chat.zalo.me">Thu Điểm Dark Night</a>
             </i>
         </div>
-        <div class="row">
-			<div style="display:flex">
-                <i>- Chọn ngày chốt điểm: </i>
-                    <input type="text" id="inputDate"  style="height: 25px;margin-left:5px" />
-            </div>
-         
-        </div>
+        
     </div>
     <div class="table-container">
         <table id="darkNightTable" class="display">
@@ -96,109 +90,17 @@
         </div>
     </div>
 
-    <h3>📤 Tải lên tệp Excel</h3>
-
-    <div class="mb-3">
-        <input type="file" id="excelFile" class="form-control" accept=".xlsx,.xls">
-    </div>
-
-    <button id="uploadBtn" class="btn btn-primary">📁 Upload Excel</button>
-    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-
-    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="errorModalLabel">Lỗi</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                </div>
-                <div class="modal-body" id="errorModalBody">
-                    <!-- danh sách người dùng sẽ hiện ở đây -->
-                </div>
-            </div>
-        </div>
-    </div>
     <script>
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         const formattedDate = yesterday.toLocaleDateString('vi-VN');
         document.getElementById('chotDiemDate').textContent = formattedDate;
-        </script>
+    </script>
     <script>
         let table;
 
         $(document).ready(function () {
-            $('#uploadBtn').click(function () {
-            const fileInput = $('#excelFile')[0];
-            const file = fileInput.files[0];
-
-            if (!file) {
-                alert('Vui lòng chọn tệp Excel!');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            $.ajax({
-                url: "/api/Manager/import-transactions",
-                type: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (response) {
-                    showToast("✅ Thành công", response, "success");
-                },
-                error: function (xhr) {
-                    const errorMsg = xhr.responseText || "Lỗi không xác định";
-                    if (errorMsg.includes("do not exist") || errorMsg.includes("không tồn tại")) {
-                        const users = extractUserListFromError(errorMsg);
-                        showErrorModal("Các người dùng không tồn tại:", users);
-                    } else {
-                        showToast("❌ Lỗi", errorMsg, "danger");
-                    }
-                }
-            });
-        });
-
-        function extractUserListFromError(msg) {
-            const parts = msg.split(":");
-            if (parts.length > 1) {
-                return parts[1].split(",").map(name => name.trim());
-            }
-            return [msg];
-        }
-
-        window.showToast = (title, message, type) => {
-            const toast = $(`
-                <div class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <strong>${title}</strong><br>${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `);
-
-            $('#toastContainer').append(toast);
-            toast.toast('show');
-
-            // Remove toast from DOM after it hides
-            toast.on('hidden.bs.toast', function () {
-                toast.remove();
-            });
-        }
-
-        function showErrorModal(title, userList) {
-            $('#errorModalLabel').text(title);
-            const content = userList.map(u => `<li>${u}</li>`).join('');
-            $('#errorModalBody').html(`<ul>${content}</ul>`);
-            $('#errorModal').modal('show');
-        }
-
-
             fetchUsers();
         });
 

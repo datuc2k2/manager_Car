@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Danh sách người dùng</title>
-    <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/2.1.4/css/dataTables.dataTables.min.css">
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- jQuery -->
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/2.1.4/js/dataTables.min.js"></script>
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -35,26 +34,47 @@
             }
 
         th:nth-child(1), td:nth-child(1) {
-            width: 10%;
+            width: 10%; /* STT */
         }
-        /* STT */
+
         th:nth-child(2), td:nth-child(2) {
-            width: 40%;
+            width: 40%; /* Tên người dùng */
         }
-        /* Tên người dùng */
+
         th:nth-child(3), td:nth-child(3) {
-            width: 20%;
+            width: 20%; /* Điểm */
         }
-        /* Điểm */
+
         th:nth-child(4), td:nth-child(4) {
-            width: 30%;
+            width: 30%; /* Thao tác */
         }
-        /* Thao tác */
     </style>
 </head>
 <body>
     <h2>Danh Sách Người Dùng</h2>
-    <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#userModal" onclick="openAddUserModal()">Thêm Người Dùng</button>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal" onclick="openAddUserModal()">➕ Thêm Người Dùng</button>
+        <div class="d-flex align-items-center gap-2">
+            <input type="file" id="excelFile" class="form-control form-control-sm" accept=".xlsx,.xls" style="width: auto;">
+            <button id="uploadBtn" class="btn btn-primary">📁 Upload Excel</button>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorModalLabel">Lỗi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body" id="errorModalBody">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <table id="userTable" class="display">
         <thead>
             <tr>
@@ -68,7 +88,6 @@
         </tbody>
     </table>
 
-    <!-- Modal for Add/Edit User -->
     <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -86,7 +105,7 @@
                             <label for="userScore" class="form-label">Điểm</label>
                             <input type="number" class="form-control" id="userScore" required>
                         </div>
-                        <input type="hidden" id="userIndex">
+                        <input type="hidden" id="userId">
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -98,39 +117,56 @@
     </div>
 
     <script>
-        $(document).ready(function () {
-            // Dữ liệu mẫu
-            let userData = [
-                { name: "Nguyễn Văn A", score: 85 },
-                { name: "Trần Thị B", score: 92 },
-                { name: "Lê Văn C", score: 78 },
-                { name: "Phạm Thị D", score: 95 },
-                { name: "Hoàng Văn E", score: 88 }
-            ];
+        let userTable; // Declare userTable globally
+        let activeAjaxRequests = 0; // To track active AJAX requests
 
-            // Khởi tạo DataTable
-            const table = $('#userTable').DataTable({
-                data: userData,
+        $(document).ready(function () {
+            // --- Global AJAX Setup for Bearer Token ---
+            const authToken = localStorage.getItem('authToken'); // Get token from localStorage
+
+            if (authToken) {
+                $.ajaxSetup({
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken
+                    }
+                });
+                console.log("Authorization header set for AJAX requests.");
+            } else {
+                console.warn("No 'authToken' found in localStorage. API requests might fail if authentication is required.");
+                // Optionally, redirect to login or show a warning:
+                // Swal.fire({
+                //     icon: 'warning',
+                //     title: 'Chưa Đăng Nhập',
+                //     text: 'Bạn cần đăng nhập để truy cập tính năng này.',
+                //     confirmButtonText: 'Đăng nhập ngay'
+                // }).then(() => {
+                //     window.location.href = '/login.html'; // Redirect to your login page
+                // });
+            }
+            // --- End Global AJAX Setup ---
+
+            // Initialize DataTable
+            userTable = $('#userTable').DataTable({
                 columns: [
                     {
                         data: null,
                         render: function (data, type, row, meta) {
-                            return meta.row + 1; // Tự động đánh số thứ tự
+                            return meta.row + 1; // Auto-increment STT
                         }
                     },
                     { data: 'name' },
-                    { data: 'score' },
+                    { data: 'point' }, // Assuming your API returns 'point' as the score property
                     {
                         data: null,
                         render: function (data, type, row, meta) {
                             return `
-                                        <button class="btn btn-sm btn-warning" onclick="openEditUserModal(${meta.row})">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${meta.row})">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    `;
+                                <button class="btn btn-sm btn-warning" onclick="openEditUserModal(${row.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${row.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            `;
                         }
                     }
                 ],
@@ -153,100 +189,236 @@
                         "next": ">",
                         "previous": "<"
                     }
-                }
+                },
+                serverSide: false,
+                processing: true
             });
 
-            function loadUsers() {
-                $.ajax({
-                    url: 'http://your-api-endpoint/users', // Thay bằng URL API của bạn
-                    method: 'GET',
-                    success: function (data) {
-                        table.clear().rows.add(data).draw();
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Lỗi khi tải danh sách người dùng:', error);
-                        alert('Không thể tải danh sách người dùng!');
+            // --- Global AJAX Loading Indicator ---
+            $(document).ajaxStart(function () {
+                activeAjaxRequests++;
+                Swal.fire({
+                    title: 'Đang tải...',
+                    text: 'Vui lòng chờ.',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
                     }
                 });
-            }
+            }).ajaxStop(function () {
+                activeAjaxRequests--;
+                // Only close if all AJAX requests are complete
+                if (activeAjaxRequests === 0) {
+                    Swal.close();
+                }
+            }).ajaxError(function (event, xhr, settings, thrownError) {
+                activeAjaxRequests--;
+                if (activeAjaxRequests === 0) {
+                    Swal.close();
+                }
 
-            // Gọi hàm tải danh sách người dùng khi trang được tải
+                // Handle 401 Unauthorized globally
+                if (xhr.status === 401) {
+                    console.error("401 Unauthorized: Token might be invalid or expired. Redirecting to login.");
+                    showToast("Lỗi xác thực", "Phiên làm việc hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.", "danger");
+                    // Clear invalid token and redirect
+                    localStorage.removeItem('authToken');
+                    // Add a small delay to allow toast to show
+                    setTimeout(() => {
+                        window.location.href = '/'; // Adjust to your login page URL
+                    }, 2000);
+                } else if (xhr.status === 403) {
+                    console.error("403 Forbidden: You do not have permission to access this resource.");
+                    showToast("Từ chối truy cập", "Bạn không có quyền thực hiện hành động này.", "danger");
+                }
+            });
+            // --- End Global AJAX Loading Indicator ---
+
+
+            // Load users initially
             loadUsers();
 
-            // Hàm mở modal để thêm người dùng
-            window.openAddUserModal = function () {
-                $('#userModalLabel').text('Thêm Người Dùng');
-                $('#userForm')[0].reset();
-                $('#userId').val('');
-            };
+            $('#uploadBtn').click(function () {
+                const fileInput = $('#excelFile')[0];
+                const file = fileInput.files[0];
 
-            // Hàm mở modal để chỉnh sửa người dùng
-            window.openEditUserModal = function (id) {
-                $.ajax({
-                    url: `http://your-api-endpoint/users/${id}`, // Thay bằng URL API của bạn
-                    method: 'GET',
-                    success: function (user) {
-                        $('#userModalLabel').text('Chỉnh Sửa Người Dùng');
-                        $('#userName').val(user.name);
-                        $('#userScore').val(user.score);
-                        $('#userId').val(user._id);
-                        $('#userModal').modal('show');
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Lỗi khi lấy thông tin người dùng:', error);
-                        alert('Không thể lấy thông tin người dùng!');
-                    }
-                });
-            };
-
-            // Hàm lưu người dùng (thêm hoặc chỉnh sửa)
-            window.saveUser = function () {
-                const name = $('#userName').val();
-                const score = parseInt($('#userScore').val());
-                const id = $('#userId').val();
-
-                if (!name || !score) {
-                    alert('Vui lòng điền đầy đủ thông tin!');
+                if (!file) {
+                    showToast("Cảnh báo", "Vui lòng chọn tệp Excel!", "warning");
                     return;
                 }
 
-                const userData = { name, score };
-                const method = id ? 'PUT' : 'POST';
-                const url = id ? `http://your-api-endpoint/users/${id}` : 'http://your-api-endpoint/users';
+                const formData = new FormData();
+                formData.append("file", file);
 
                 $.ajax({
-                    url: url, // Thay bằng URL API của bạn
-                    method: method,
-                    contentType: 'application/json',
-                    data: JSON.stringify(userData),
-                    success: function () {
+                    url: "/api/Manager/import-transactions",
+                    type: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        showToast("Thành công", response, "success");
                         loadUsers();
-                        $('#userModal').modal('hide');
                     },
-                    error: function (xhr, status, error) {
-                        console.error('Lỗi khi lưu người dùng:', error);
-                        alert('Không thể lưu người dùng!');
+                    error: function (xhr) {
+                        // Global ajaxError will handle the SweetAlert close for this
+                        const errorMsg = xhr.responseText || "Lỗi không xác định";
+                        if (errorMsg.includes("do not exist") || errorMsg.includes("không tồn tại")) {
+                            const users = extractUserListFromError(errorMsg);
+                            showErrorModal("Các người dùng không tồn tại:", users);
+                        } else {
+                            showToast("Lỗi", errorMsg, "danger");
+                        }
                     }
                 });
-            };
+            });
 
-            // Hàm xóa người dùng
-            window.deleteUser = function (id) {
-                if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
+            function extractUserListFromError(msg) {
+                const parts = msg.split(":");
+                if (parts.length > 1) {
+                    return parts[1].split(",").map(name => name.trim());
+                }
+                return [msg];
+            }
+        }); // End of $(document).ready
+
+        window.showToast = (title, message, type) => {
+            const toast = $(`
+                <div class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>${title}</strong><br>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+
+            $('#toastContainer').append(toast);
+            toast.toast('show');
+
+            toast.on('hidden.bs.toast', function () {
+                toast.remove();
+            });
+        };
+
+        function showErrorModal(title, userList) {
+            $('#errorModalLabel').text(title);
+            const content = userList.map(u => `<li>${u}</li>`).join('');
+            $('#errorModalBody').html(`<ul>${content}</ul>`);
+            $('#errorModal').modal('show');
+        }
+
+        window.loadUsers = function () {
+            $.ajax({
+                url: '/api/User',
+                method: 'GET',
+                success: function (data) {
+                    userTable.clear().rows.add(data).draw();
+                },
+                error: function (xhr, status, error) {
+                    // This error is caught by global ajaxError handler
+                    console.error('Lỗi khi tải danh sách người dùng:', error);
+                    // showToast("Lỗi", "Không thể tải danh sách người dùng!", "danger"); // No need to show toast twice
+                }
+            });
+        };
+
+        window.openAddUserModal = function () {
+            $('#userModalLabel').text('Thêm Người Dùng');
+            $('#userForm')[0].reset();
+            $('#userId').val('');
+        };
+
+        window.openEditUserModal = function (id) {
+            $.ajax({
+                url: `/api/User/${id}`,
+                method: 'GET',
+                success: function (user) {
+                    $('#userModalLabel').text('Chỉnh Sửa Người Dùng');
+                    $('#userName').val(user.name);
+                    $('#userScore').val(user.point); // Assuming 'point' is the score property from your API
+                    $('#userId').val(user.id);
+                    $('#userModal').modal('show');
+                },
+                error: function (xhr, status, error) {
+                    // This error is caught by global ajaxError handler
+                    console.error('Lỗi khi lấy thông tin người dùng:', error);
+                    // showToast("Lỗi", "Không thể lấy thông tin người dùng!", "danger"); // No need to show toast twice
+                }
+            });
+        };
+
+        window.saveUser = function () {
+            const name = $('#userName').val();
+            const score = parseFloat($('#userScore').val()) || 0;
+            const id = $('#userId').val();
+
+            if (!name || isNaN(score)) {
+                showToast("Cảnh báo", "Vui lòng điền đầy đủ và chính xác thông tin!", "warning");
+                return;
+            }
+
+            const userData = { name, point: score }; // Ensure 'point' matches your C# model's property
+            let method, url;
+
+            if (id) {
+                method = 'PUT';
+                url = `/api/User/${id}`;
+                userData.id = parseInt(id);
+            } else {
+                method = 'POST';
+                url = '/api/User';
+            }
+
+            $.ajax({
+                url: url,
+                method: method,
+                contentType: 'application/json',
+                data: JSON.stringify(userData),
+                success: function () {
+                    showToast("Thành công", id ? "Chỉnh sửa người dùng thành công!" : "Thêm người dùng thành công!", "success");
+                    loadUsers();
+                    $('#userModal').modal('hide');
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                },
+                error: function (xhr, status, error) {
+                    // This error is caught by global ajaxError handler
+                    console.error('Lỗi khi lưu người dùng:', error);
+                    // showToast("Lỗi", "Không thể lưu người dùng!", "danger"); // No need to show toast twice
+                }
+            });
+        };
+
+        window.deleteUser = function (id) {
+            Swal.fire({
+                title: 'Bạn có chắc chắn?',
+                text: 'Hành động này sẽ xóa người dùng vĩnh viễn!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
                     $.ajax({
-                        url: `http://your-api-endpoint/users/${id}`, // Thay bằng URL API của bạn
+                        url: `/api/User/${id}`,
                         method: 'DELETE',
                         success: function () {
+                            showToast("Thành công", "🗑️ Xóa người dùng thành công!", "success");
                             loadUsers();
                         },
                         error: function (xhr, status, error) {
+                            // This error is caught by global ajaxError handler
                             console.error('Lỗi khi xóa người dùng:', error);
-                            alert('Không thể xóa người dùng!');
+                            // showToast("Lỗi", "❌ Không thể xóa người dùng!", "danger"); // No need to show toast twice
                         }
                     });
                 }
-            };
-        });
+            });
+        };
     </script>
 </body>
 </html>

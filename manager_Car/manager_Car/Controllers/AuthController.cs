@@ -20,6 +20,10 @@ namespace manager_Car.Controllers
         public async Task<IActionResult> Login(AdminLoginModel adminLoginModel)
         {
             var token = await _authService.Login(adminLoginModel);
+            if (token == "Đăng nhập thất bại!")
+            {
+                return BadRequest();
+            }
             return Ok(token);
         }
 

@@ -1,14 +1,14 @@
-﻿@model manager_Car.Models.AdminLoginModel
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    @* <link href="https://fonts.googleapis.com/css?family=Roboto:300,400&display=swap" rel="stylesheet"> *@
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400&display=swap" rel="stylesheet">
 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<style>
+    <style>
         body {
             font-family: 'Roboto', sans-serif;
             background-color: #f8f9fd;
@@ -113,90 +113,89 @@
         .ml-auto {
             margin-left: auto;
         }
-        label{
+
+        label {
             display: inline-block;
             margin-bottom: 0.5rem;
         }
-</style>
+    </style>
 
     <title>Login #2</title>
 </head>
 <body>
 
 
-    <div class="d-lg-flex half">
-        <div class="contents order-2 order-md-1">
-            <div id="errorMessage" class="alert alert-danger alert-dismissible fade show d-none" role="alert" style="position: fixed; top: 10px; right: 10px;">
-                <span id="errorText"></span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            <div class="container" >
+    <div class="half">
+        <div class="contents">
+            <div class="container">
                 <div class="row align-items-center justify-content-center">
                     <div class="col-md-7">
                         <h2>Đăng nhập hệ thống</h2>
                         <form id="loginForm" method="post">
                             <div class="form-group first">
                                 <label for="user_name">Tài khoản</label>
-                                <input type="text" class="form-control" asp-for="user_name" id="user_name">
-                                <span asp-validation-for="user_name" class="text-danger"></span>
+                                <input type="text" class="form-control" name="user_name" id="user_name">
+                                <span class="text-danger" id="usernameError"></span>
                             </div>
+
                             <div class="form-group last mb-3">
-                                <label for="user_password" >Mật khẩu</label>
-                                <input type="password" class="form-control" asp-for="user_password" placeholder="********" id="user_password">
-                                <span asp-validation-for="user_password" class="text-danger"></span>
+                                <label for="user_password">Mật khẩu</label>
+                                <input type="password" class="form-control" name="user_password" id="user_password" placeholder="********">
+                                <span class="text-danger" id="passwordError"></span>
                             </div>
 
-                            <input style="cursor:pointer" type="submit" value="Đăng nhập" class="btn btn-block btn-primary">
-
+                            <input type="submit" value="Đăng nhập" class="btn btn-block btn-primary" style="cursor:pointer">
                         </form>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="bg order-1 order-md-2" style="background-image: url('image/bg_1.jpg');"></div>
 
-
+        <div class="bg" style="background-image: url('image/bg_1.jpg');"></div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
     <script>
         $(document).ready(function () {
             $('#loginForm').on('submit', function (e) {
                 e.preventDefault();
+
                 var formData = {
                     user_name: $('input[name="user_name"]').val(),
                     user_password: $('input[name="user_password"]').val()
                 };
 
                 $.ajax({
-                    url: '@Url.Action("Login", "Login")',
+                    url: '/api/Auth/Login',
                     type: 'POST',
-                    data: formData,
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
                     success: function (response) {
-                        if (response.success) {
+                        if (response) {
                             // Lưu token vào localStorage
-                            localStorage.setItem("authToken", response.token);
-                            // Điều hướng đến /home
-                            window.location.href = response.redirectUrl;
+                            localStorage.setItem("authToken", response);
+
+                            // Điều hướng nếu có đường dẫn, hoặc mặc định về /home
+                            const redirectUrl = "/manage/AccountList";
+                            window.location.href = redirectUrl;
                         } else {
-                            // Hiển thị thông báo lỗi
                             Swal.fire({
                                 toast: true,
                                 position: 'top-end',
                                 icon: 'error',
-                                title: response.message,
+                                title: response.message || 'Đăng nhập thất bại!',
                                 showConfirmButton: false,
                                 timer: 3000
                             });
                         }
                     },
-                    error: function () {
+                    error: function (xhr) {
+                        const message = xhr.responseJSON?.message || 'Đăng nhập thất bại!';
                         Swal.fire({
                             toast: true,
                             position: 'top-end',
                             icon: 'error',
-                            title: 'Lỗi hệ thống!',
+                            title: message,
                             showConfirmButton: false,
                             timer: 3000
                         });
@@ -205,7 +204,6 @@
             });
         });
     </script>
-    
 
 </body>
 </html>
