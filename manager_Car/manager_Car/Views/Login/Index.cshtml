@@ -1,4 +1,5 @@
-﻿<!doctype html>
+﻿@model manager_Car.Models.AdminLoginModel
+<!doctype html>
 <html lang="en">
 <head>
     <!-- Required meta tags -->
@@ -125,19 +126,24 @@
 
     <div class="d-lg-flex half">
         <div class="contents order-2 order-md-1">
-
+            <div id="errorMessage" class="alert alert-danger alert-dismissible fade show d-none" role="alert" style="position: fixed; top: 10px; right: 10px;">
+                <span id="errorText"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
             <div class="container" >
                 <div class="row align-items-center justify-content-center">
                     <div class="col-md-7">
                         <h2>Đăng nhập hệ thống</h2>
-                        <form action="#" method="post">
+                        <form id="loginForm" method="post">
                             <div class="form-group first">
-                                <label for="username">Tài khoản</label>
-                                <input type="text" class="form-control" id="username">
+                                <label for="user_name">Tài khoản</label>
+                                <input type="text" class="form-control" asp-for="user_name" id="user_name">
+                                <span asp-validation-for="user_name" class="text-danger"></span>
                             </div>
                             <div class="form-group last mb-3">
-                                <label for="password">Mật khẩu</label>
-                                <input type="password" class="form-control" placeholder="********" id="password">
+                                <label for="user_password" >Mật khẩu</label>
+                                <input type="password" class="form-control" asp-for="user_password" placeholder="********" id="user_password">
+                                <span asp-validation-for="user_password" class="text-danger"></span>
                             </div>
 
                             <input style="cursor:pointer" type="submit" value="Đăng nhập" class="btn btn-block btn-primary">
@@ -151,8 +157,55 @@
 
 
     </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <script>
+        $(document).ready(function () {
+            $('#loginForm').on('submit', function (e) {
+                e.preventDefault();
+                var formData = {
+                    user_name: $('input[name="user_name"]').val(),
+                    user_password: $('input[name="user_password"]').val()
+                };
 
+                $.ajax({
+                    url: '@Url.Action("Login", "Login")',
+                    type: 'POST',
+                    data: formData,
+                    success: function (response) {
+                        if (response.success) {
+                            // Lưu token vào localStorage
+                            localStorage.setItem("authToken", response.token);
+                            // Điều hướng đến /home
+                            window.location.href = response.redirectUrl;
+                        } else {
+                            // Hiển thị thông báo lỗi
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'error',
+                                title: response.message,
+                                showConfirmButton: false,
+                                timer: 3000
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'error',
+                            title: 'Lỗi hệ thống!',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+    
 
 </body>
 </html>

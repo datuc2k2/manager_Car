@@ -118,7 +118,13 @@
             </div>
         </div>
     </div>
-
+    <script>
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const formattedDate = yesterday.toLocaleDateString('vi-VN');
+        document.getElementById('chotDiemDate').textContent = formattedDate;
+        </script>
     <script>
         let table;
 

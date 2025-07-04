@@ -156,52 +156,94 @@
                 }
             });
 
+            function loadUsers() {
+                $.ajax({
+                    url: 'http://your-api-endpoint/users', // Thay bằng URL API của bạn
+                    method: 'GET',
+                    success: function (data) {
+                        table.clear().rows.add(data).draw();
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Lỗi khi tải danh sách người dùng:', error);
+                        alert('Không thể tải danh sách người dùng!');
+                    }
+                });
+            }
+
+            // Gọi hàm tải danh sách người dùng khi trang được tải
+            loadUsers();
+
             // Hàm mở modal để thêm người dùng
             window.openAddUserModal = function () {
                 $('#userModalLabel').text('Thêm Người Dùng');
                 $('#userForm')[0].reset();
-                $('#userIndex').val('');
+                $('#userId').val('');
             };
 
             // Hàm mở modal để chỉnh sửa người dùng
-            window.openEditUserModal = function (index) {
-                $('#userModalLabel').text('Chỉnh Sửa Người Dùng');
-                const user = userData[index];
-                $('#userName').val(user.name);
-                $('#userScore').val(user.score);
-                $('#userIndex').val(index);
-                $('#userModal').modal('show');
+            window.openEditUserModal = function (id) {
+                $.ajax({
+                    url: `http://your-api-endpoint/users/${id}`, // Thay bằng URL API của bạn
+                    method: 'GET',
+                    success: function (user) {
+                        $('#userModalLabel').text('Chỉnh Sửa Người Dùng');
+                        $('#userName').val(user.name);
+                        $('#userScore').val(user.score);
+                        $('#userId').val(user._id);
+                        $('#userModal').modal('show');
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Lỗi khi lấy thông tin người dùng:', error);
+                        alert('Không thể lấy thông tin người dùng!');
+                    }
+                });
             };
 
             // Hàm lưu người dùng (thêm hoặc chỉnh sửa)
             window.saveUser = function () {
                 const name = $('#userName').val();
                 const score = parseInt($('#userScore').val());
-                const index = $('#userIndex').val();
+                const id = $('#userId').val();
 
                 if (!name || !score) {
                     alert('Vui lòng điền đầy đủ thông tin!');
                     return;
                 }
 
-                if (index === '') {
-                    // Thêm mới
-                    userData.push({ name, score });
-                } else {
-                    // Cập nhật
-                    userData[index] = { name, score };
-                }
+                const userData = { name, score };
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `http://your-api-endpoint/users/${id}` : 'http://your-api-endpoint/users';
 
-                // Cập nhật DataTable
-                table.clear().rows.add(userData).draw();
-                $('#userModal').modal('hide');
+                $.ajax({
+                    url: url, // Thay bằng URL API của bạn
+                    method: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(userData),
+                    success: function () {
+                        loadUsers();
+                        $('#userModal').modal('hide');
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Lỗi khi lưu người dùng:', error);
+                        alert('Không thể lưu người dùng!');
+                    }
+                });
             };
 
             // Hàm xóa người dùng
-            window.deleteUser = function (index) {
+            window.deleteUser = function (id) {
                 if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
-                    userData.splice(index, 1);
-                    table.clear().rows.add(userData).draw();
+                    $.ajax({
+                        url: `http://your-api-endpoint/users/${id}`, // Thay bằng URL API của bạn
+                        method: 'DELETE',
+                        success: function () {
+                            loadUsers();
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Lỗi khi xóa người dùng:', error);
+                            alert('Không thể xóa người dùng!');
+                        }
+                    });
                 }
             };
         });
