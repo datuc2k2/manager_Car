@@ -18,7 +18,10 @@
 
   <ItemGroup>
     <Folder Include="Images\" />
-    <Folder Include="wwwroot\image\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\image\Logo zoom chuẩn.png" />
   </ItemGroup>
 
 </Project>
