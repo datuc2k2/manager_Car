@@ -289,6 +289,23 @@ namespace manager_Car.Controllers
             {
                 return NotFound("Không có giao dịch nào vào ngày này.");
             }
+            var list_user = await _carManagerContext.Users.ToListAsync();
+            var userDict = list_user
+                        .GroupBy(u => u.Name)
+                        .ToDictionary(g => g.Key, g => g.First());
+
+            foreach (var trans in transactionDeletes)
+            {
+                if (trans.ProposeUsername != "FLASHCAR" && userDict.TryGetValue(trans.ProposeUsername, out var pUser))
+                {
+                    pUser.Point -= trans.Point;
+                }
+
+                if (trans.ReceiveUsername != "FLASHCAR" && userDict.TryGetValue(trans.ReceiveUsername, out var rUser))
+                {
+                    rUser.Point += trans.Point;
+                }
+            }
 
             _carManagerContext.Transactions.RemoveRange(transactionDeletes);
             await _carManagerContext.SaveChangesAsync();
