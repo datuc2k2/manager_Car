@@ -107,6 +107,15 @@
 			}
 		}
 
+		/* Default styles for desktop (or larger screens) */
+		#hl1 {
+			display: inline; /* Ensure it stays on the same line as "Bảng tổng kết điểm" */
+		}
+
+		#hl2 {
+			display: none; /* Hidden by default on desktop */
+		}
+
 		@@media (max-width: 576px) {
 			body {
 				font-size: 14px;
@@ -123,6 +132,15 @@
 			.table-container {
 				padding: 5px;
 			}
+			/* Styles for mobile (screens up to 576px wide) */
+			#hl1 {
+				display: none; /* Hide the single-line version on mobile */
+			}
+
+			#hl2 {
+				margin-top: 8px;
+				display: block; /* Show the block-level (new line) version on mobile */
+			}
 		}
 	</style>
 </head>
@@ -132,7 +150,8 @@
 		<div class="header_image">
 			<img src="~/image/Logo zoom chuẩn.png" alt="Logo" class="logo">
 			<div>
-				<h2 style="text-align:center">Bảng tổng kết điểm <span style="color:#0dcaf0!important"> FLASHCAR GROUP</span></h2>
+				<h2 style="text-align:center">Bảng tổng kết điểm <span id="hl1" style="color:#0dcaf0!important"> FLASHCAR GROUP</span><br /><span id="hl2" style="color:#0dcaf0!important;"> FLASHCAR GROUP</span></h2>
+				
 			</div>
 		</div>
     <ul class="contact-info list-unstyled">
