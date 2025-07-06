@@ -2,7 +2,9 @@
 using manager_Car.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using OfficeOpenXml;
 
@@ -28,6 +30,18 @@ namespace manager_Car.Controllers
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
+            // Create user FLASHCAR if dont exist;
+            var userFLASHCAR = await _carManagerContext.Users.FirstOrDefaultAsync(u => u.Name == "FLASHCAR");
+            if (userFLASHCAR == null)
+            {
+                User u_create = new User()
+                {
+                    Name = "FLASHCAR",
+                    Point = 0
+                };
+                _carManagerContext.Add(u_create);
+            }
+
             using (var stream = new MemoryStream())
             {
                 await file.CopyToAsync(stream);
@@ -36,6 +50,8 @@ namespace manager_Car.Controllers
                     var worksheet = package.Workbook.Worksheets[0];
                     int rowCount = worksheet.Dimension.Rows;
 
+                    string checkImport = worksheet.Cells[3, 1].Text.ToLower().Trim();
+
                     string dateText = "1/7";
                     var users = await _carManagerContext.Users.ToListAsync();
                     var userNames = users.Select(u => u.Name.ToLower().Trim()).ToHashSet();
@@ -43,90 +59,183 @@ namespace manager_Car.Controllers
                     var transactions = new List<Transaction>();
                     var missingUsers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                    for (int row = 2; row <= rowCount; row += 2)
+                    switch (checkImport)
                     {
-                        try
-                        {
-                            // Check if the current row (or the pair of rows) is essentially empty
-                            // This is the new stopping condition
-                            var proposeUsernameCheck = worksheet.Cells[row, 3].Text.Trim();
-                            var pointTextCheck = worksheet.Cells[row, 4].Text.Trim();
-                            var receiveUsernameCheck = worksheet.Cells[row + 1, 3].Text.Trim();
+                        case "salary":
 
-                            if (string.IsNullOrEmpty(proposeUsernameCheck) &&
-                                string.IsNullOrEmpty(pointTextCheck) &&
-                                string.IsNullOrEmpty(receiveUsernameCheck))
+                            // Loop through each row, starting from row 2 (assuming headers in row 1)
+                            for (int row = 2; row <= rowCount; row++)
                             {
-                                // If all key fields for this transaction pair are empty, stop processing
-                                break;
+                                try
+                                {
+                                    if (row == 2 && !string.IsNullOrEmpty(worksheet.Cells[row, 1].Text.Trim()))
+                                        dateText = worksheet.Cells[row, 1].Text.Trim();
+
+                                    var usernameCellText = worksheet.Cells[row, 3].Text.Trim();
+                                    var pointText = worksheet.Cells[row, 4].Text.Trim();
+
+                                    if (string.IsNullOrEmpty(usernameCellText) && string.IsNullOrEmpty(pointText))
+                                    {
+                                        break;
+                                    }
+
+                                    if (string.IsNullOrEmpty(usernameCellText))
+                                    {
+                                        Console.WriteLine($"Skipping row {row}: 'Tên column' is empty.");
+                                        continue;
+                                    }
+
+                                    if (!decimal.TryParse(pointText.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal pointValue))
+                                    {
+                                        return BadRequest($"Invalid point format at row {row}: '{pointText}'");
+                                    }
+
+                                    string proposeUsername;
+                                    string receiveUsername;
+
+                                    if (pointValue >= 0)
+                                    {
+                                        proposeUsername = usernameCellText;
+                                        receiveUsername = "FLASHCAR";
+                                    }
+                                    else
+                                    {
+                                        proposeUsername = "FLASHCAR";
+                                        receiveUsername = usernameCellText;
+                                    }
+
+                                    if (!userNames.Contains(usernameCellText.ToLower()))
+                                    {
+                                        missingUsers.Add(usernameCellText);
+                                    }
+
+                                    if (missingUsers.Contains(usernameCellText))
+                                    {
+                                        continue;
+                                    }
+
+                                    var calendarText = worksheet.Cells[row, 6].Text.Trim();
+
+                                    var transaction = new Transaction
+                                    {
+                                        ProposeUsername = proposeUsername,
+                                        ReceiveUsername = receiveUsername,
+                                        Point = Math.Abs(pointValue),
+                                        DateTime = ParseDateTimeWithTime(dateText, "00:00"),
+                                        Calendar1 = calendarText
+                                    };
+
+                                    transactions.Add(transaction);
+
+                                    var userAffected = users.FirstOrDefault(u => u.Name.Equals(usernameCellText, StringComparison.OrdinalIgnoreCase));
+                                    if (userAffected != null)
+                                    {
+                                        userAffected.Point += pointValue;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    return BadRequest($"Lỗi tại dòng {row}: {ex.Message}");
+                                }
                             }
 
-                            if (row == 2 && !string.IsNullOrEmpty(worksheet.Cells[row, 1].Text.Trim()))
-                                dateText = worksheet.Cells[row, 1].Text.Trim();
-
-                            var proposeUsername = proposeUsernameCheck;
-                            var pointText = pointTextCheck;
-
-                            var timeText = !string.IsNullOrEmpty(worksheet.Cells[row, 5].Text.Trim())
-                                ? worksheet.Cells[row, 5].Text.Trim()
-                                : worksheet.Cells[row + 1, 5].Text.Trim();
-                            if (string.IsNullOrEmpty(timeText))
-                                timeText = "00h00";
-
-                            var calendar1 = worksheet.Cells[row, 6].Text.Trim();
-                            var receiveUsername = receiveUsernameCheck;
-                            var calendar2 = worksheet.Cells[row + 1, 6].Text.Trim();
-
-                            // Track unknown usernames
-                            if (!userNames.Contains(proposeUsername.ToLower()))
-                                missingUsers.Add(proposeUsername);
-                            if (!userNames.Contains(receiveUsername.ToLower()))
-                                missingUsers.Add(receiveUsername);
-
-                            // Skip parsing further if users not found
-                            if (missingUsers.Count > 0) continue;
-
-                            if (!decimal.TryParse(pointText.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal pointValue))
-                                return BadRequest($"Invalid point format at row {row}: '{pointText}'");
-
-                            var transaction = new Transaction
+                            if (missingUsers.Count > 0)
                             {
-                                ProposeUsername = proposeUsername,
-                                ReceiveUsername = receiveUsername,
-                                Point = pointValue,
-                                DateTime = ParseDateTimeWithTime(dateText, timeText),
-                                Calendar1 = calendar1,
-                                Calendar2 = calendar2
-                            };
+                                return BadRequest("Import thất bại. Các user không tồn tại là: " +
+                                                    string.Join(", ", missingUsers));
+                            }
 
-                            transactions.Add(transaction);
+                            await _carManagerContext.Transactions.AddRangeAsync(transactions);
+                            await _carManagerContext.SaveChangesAsync();
+                            return Ok($"Import thành công. Đã thêm {transactions.Count} giao dịch tính lương.");
+                        case "transaction":
+                            for (int row = 2; row <= rowCount; row += 2)
+                            {
+                                try
+                                {
+                                    // Check if the current row (or the pair of rows) is essentially empty
+                                    // This is the new stopping condition
+                                    var proposeUsernameCheck = worksheet.Cells[row, 3].Text.Trim();
+                                    var pointTextCheck = worksheet.Cells[row, 4].Text.Trim();
+                                    var receiveUsernameCheck = worksheet.Cells[row + 1, 3].Text.Trim();
 
-                            // Update points in-memory
-                            var sender = users.FirstOrDefault(u => u.Name.Equals(proposeUsername, StringComparison.OrdinalIgnoreCase));
-                            if (sender != null)
-                                sender.Point += pointValue;
+                                    if (string.IsNullOrEmpty(proposeUsernameCheck) &&
+                                        string.IsNullOrEmpty(pointTextCheck) &&
+                                        string.IsNullOrEmpty(receiveUsernameCheck))
+                                    {
+                                        // If all key fields for this transaction pair are empty, stop processing
+                                        break;
+                                    }
 
-                            var receiver = users.FirstOrDefault(u => u.Name.Equals(receiveUsername, StringComparison.OrdinalIgnoreCase));
-                            if (receiver != null)
-                                receiver.Point -= pointValue;
-                        }
-                        catch (Exception ex)
-                        {
-                            return BadRequest($"Lỗi tại dòng {row}/{row + 1}: {ex.Message}");
-                        }
+                                    if (row == 2 && !string.IsNullOrEmpty(worksheet.Cells[row, 1].Text.Trim()))
+                                        dateText = worksheet.Cells[row, 1].Text.Trim();
+
+                                    var proposeUsername = proposeUsernameCheck;
+                                    var pointText = pointTextCheck;
+
+                                    var timeText = !string.IsNullOrEmpty(worksheet.Cells[row, 5].Text.Trim())
+                                        ? worksheet.Cells[row, 5].Text.Trim()
+                                        : worksheet.Cells[row + 1, 5].Text.Trim();
+                                    if (string.IsNullOrEmpty(timeText))
+                                        timeText = "00h00";
+
+                                    var calendar1 = worksheet.Cells[row, 6].Text.Trim();
+                                    var receiveUsername = receiveUsernameCheck;
+                                    var calendar2 = worksheet.Cells[row + 1, 6].Text.Trim();
+
+                                    // Track unknown usernames
+                                    if (!userNames.Contains(proposeUsername.ToLower()))
+                                        missingUsers.Add(proposeUsername);
+                                    if (!userNames.Contains(receiveUsername.ToLower()))
+                                        missingUsers.Add(receiveUsername);
+
+                                    // Skip parsing further if users not found
+                                    if (missingUsers.Count > 0) continue;
+
+                                    if (!decimal.TryParse(pointText.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal pointValue))
+                                        return BadRequest($"Invalid point format at row {row}: '{pointText}'");
+
+                                    var transaction = new Transaction
+                                    {
+                                        ProposeUsername = proposeUsername,
+                                        ReceiveUsername = receiveUsername,
+                                        Point = pointValue,
+                                        DateTime = ParseDateTimeWithTime(dateText, timeText),
+                                        Calendar1 = calendar1,
+                                        Calendar2 = calendar2
+                                    };
+
+                                    transactions.Add(transaction);
+
+                                    // Update points in-memory
+                                    var sender = users.FirstOrDefault(u => u.Name.Equals(proposeUsername, StringComparison.OrdinalIgnoreCase));
+                                    if (sender != null)
+                                        sender.Point += pointValue;
+
+                                    var receiver = users.FirstOrDefault(u => u.Name.Equals(receiveUsername, StringComparison.OrdinalIgnoreCase));
+                                    if (receiver != null)
+                                        receiver.Point -= pointValue;
+                                }
+                                catch (Exception ex)
+                                {
+                                    return BadRequest($"Lỗi tại dòng {row}/{row + 1}: {ex.Message}");
+                                }
+                            }
+
+                            // If any unknown users found, abort and notify
+                            if (missingUsers.Count > 0)
+                            {
+                                return BadRequest("Import thất bại. Các user không tồn tại là: " +
+                                                  string.Join(", ", missingUsers));
+                            }
+
+                            await _carManagerContext.Transactions.AddRangeAsync(transactions);
+                            await _carManagerContext.SaveChangesAsync();
+
+                            return Ok($"Import thành công. Đã thêm {transactions.Count} giao dịch.");
+                        default:
+                            return BadRequest("Bạn chưa nhập đánh dấu trang (Salary - Transaction) ở ô A3");
                     }
-
-                    // If any unknown users found, abort and notify
-                    if (missingUsers.Count > 0)
-                    {
-                        return BadRequest("Import thất bại. Các user không tồn tại là: " +
-                                          string.Join(", ", missingUsers));
-                    }
-
-                    await _carManagerContext.Transactions.AddRangeAsync(transactions);
-                    await _carManagerContext.SaveChangesAsync();
-
-                    return Ok($"Import thành công. Đã thêm {transactions.Count} giao dịch.");
                 }
             }
         }
@@ -155,6 +264,36 @@ namespace manager_Car.Controllers
             }
 
             return finalDateTime;
+        }
+
+        [HttpDelete("delete-transactions")]
+        public async Task<IActionResult> DeleteTransactionsByDate([FromQuery] string dateText)
+        {
+            if (string.IsNullOrWhiteSpace(dateText))
+                return BadRequest("Missing or invalid date.");
+
+            if (!DateTime.TryParseExact(dateText, new[] { "d/M/yyyy", "dd/MM/yyyy" },
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                return BadRequest("Invalid date format. Use 'd/M/yyyy' (e.g. 1/7/2025).");
+            }
+
+            var startOfDay = date.Date;
+            var endOfDay = date.Date.AddDays(1);
+
+            var transactionDeletes = await _carManagerContext.Transactions
+                .Where(t => t.DateTime >= startOfDay && t.DateTime < endOfDay)
+                .ToListAsync();
+
+            if (!transactionDeletes.Any())
+            {
+                return NotFound("Không có giao dịch nào vào ngày này.");
+            }
+
+            _carManagerContext.Transactions.RemoveRange(transactionDeletes);
+            await _carManagerContext.SaveChangesAsync();
+
+            return Ok(new { message = $"Đã xóa {transactionDeletes.Count} giao dịch vào ngày {dateText}." });
         }
 
     }

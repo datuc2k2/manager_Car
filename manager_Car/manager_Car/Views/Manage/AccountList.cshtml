@@ -53,12 +53,23 @@
 <body>
     <h2>Danh Sách Người Dùng</h2>
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+
+        <!-- Add User Button -->
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal" onclick="openAddUserModal()">➕ Thêm Người Dùng</button>
-        <div class="d-flex align-items-center gap-2">
+
+        <!-- Upload Excel + Delete Section -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- Delete User -->
+            <input type="text" id="deleteTransactionInput" class="form-control form-control-sm" placeholder="Nhập ngày xoá: 1/7/2025" style="width: 200px;">
+            <button class="btn btn-danger" onclick="deleteTransactionByDate()">🗑️ Xóa giao dịch</button>
+
+            <!-- Upload Excel -->
             <input type="file" id="excelFile" class="form-control form-control-sm" accept=".xlsx,.xls" style="width: auto;">
             <button id="uploadBtn" class="btn btn-primary">📁 Upload Excel</button>
         </div>
+
     </div>
+
 
     <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
@@ -194,45 +205,125 @@
                 processing: true
             });
 
-            // --- Global AJAX Loading Indicator ---
-            $(document).ajaxStart(function () {
-                activeAjaxRequests++;
-                Swal.fire({
-                    title: 'Đang tải...',
-                    text: 'Vui lòng chờ.',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-            }).ajaxStop(function () {
-                activeAjaxRequests--;
-                // Only close if all AJAX requests are complete
-                if (activeAjaxRequests === 0) {
-                    Swal.close();
-                }
-            }).ajaxError(function (event, xhr, settings, thrownError) {
-                activeAjaxRequests--;
-                if (activeAjaxRequests === 0) {
-                    Swal.close();
-                }
+        window.deleteTransactionByDate = () => {
+            const transactionDate = $('#deleteTransactionInput').val().trim();
 
-                // Handle 401 Unauthorized globally
-                if (xhr.status === 401) {
-                    console.error("401 Unauthorized: Token might be invalid or expired. Redirecting to login.");
-                    showToast("Lỗi xác thực", "Phiên làm việc hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.", "danger");
-                    // Clear invalid token and redirect
-                    localStorage.removeItem('authToken');
-                    // Add a small delay to allow toast to show
-                    setTimeout(() => {
-                        window.location.href = '/'; // Adjust to your login page URL
-                    }, 2000);
-                } else if (xhr.status === 403) {
-                    console.error("403 Forbidden: You do not have permission to access this resource.");
-                    showToast("Từ chối truy cập", "Bạn không có quyền thực hiện hành động này.", "danger");
+            if (!transactionDate) {
+                showToast("Lỗi", "Vui lòng nhập ngày xoá giao dịch.", "danger");
+                return;
+            }
+
+            Swal.fire({
+                title: `Xác nhận xóa`,
+                text: `Bạn có chắc chắn muốn xóa giao dịch ngày "${transactionDate}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '🗑️ Xóa',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/api/Manager/delete-transactions?dateText=${encodeURIComponent(transactionDate)}`,
+                        method: 'DELETE',
+                        success: function (res) {
+                            showToast("Thành công", res.message, "success");
+                            loadUsers(); // Refresh list if needed
+                        },
+                        error: function (xhr) {
+                            showToast("Lỗi", xhr.responseText || "Không thể xóa giao dịch.", "danger");
+                        }
+                    });
                 }
             });
-            // --- End Global AJAX Loading Indicator ---
+        }
+
+
+                // Track active AJAX requests
+        let activeAjaxRequests = 0;
+
+        // --- Global AJAX Loading Indicator ---
+        $(document)
+            .ajaxStart(function () {
+                activeAjaxRequests++;
+                if (activeAjaxRequests === 1 && !Swal.getPopup()?.classList.contains('swal2-toast')) {
+                    // Only show if no toast is being shown
+                    Swal.fire({
+                        title: 'Đang tải...',
+                        text: 'Vui lòng chờ.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                }
+            })
+            .ajaxStop(function () {
+                setTimeout(() => {
+                    activeAjaxRequests--;
+                    closeIfLoadingSwal(); // ✅ only closes loading modal, not toast
+                }, 100);
+            })
+            .ajaxError(function (event, xhr, settings, thrownError) {
+                setTimeout(() => {
+                    activeAjaxRequests--;
+                    closeIfLoadingSwal();
+
+                    if (xhr.status === 401) {
+                        console.error("401 Unauthorized");
+                        showToast("Lỗi xác thực", "Phiên làm việc hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.", "danger");
+                        localStorage.removeItem('authToken');
+                        setTimeout(() => {
+                            window.location.href = '/'; // Adjust if needed
+                        }, 2000);
+                    } else if (xhr.status === 403) {
+                        console.error("403 Forbidden");
+                        showToast("Từ chối truy cập", "Bạn không có quyền thực hiện hành động này.", "danger");
+                    } else {
+                        console.error(`AJAX Error: ${xhr.status} - ${thrownError || 'Unknown Error'} for URL: ${settings.url}`);
+                        // Optional generic error
+                        // showToast("Lỗi", "Đã xảy ra lỗi. Vui lòng thử lại.", "danger");
+                    }
+                }, 100);
+            });
+
+        /**
+         * ✅ Only closes if Swal popup is the loading modal (not toast)
+         */
+        function closeIfLoadingSwal() {
+            const popup = Swal.getPopup();
+            if (
+                activeAjaxRequests === 0 &&
+                Swal.isVisible() &&
+                popup &&
+                !popup.classList.contains('swal2-toast') // Make sure it's NOT a toast
+            ) {
+                Swal.close();
+            }
+        }
+
+        // --- Toast Notification ---
+        function showToast(title, message, type) {
+            Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            }).fire({
+                icon: type === 'danger' ? 'error' : type, // Map 'danger' to 'error'
+                title: title,
+                text: message
+            });
+        }
+
+        // --- End Global AJAX Loading Indicator ---
 
 
             // Load users initially
