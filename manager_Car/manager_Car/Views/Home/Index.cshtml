@@ -213,7 +213,7 @@
 					</div>
 
 					<hr>
-					<p> <span class="text-warning "> >></span> Chốt điểm đến 23h59 ngày 01/07/2025 : <span class="text-warning fw-bold">1.5 đ</span></p>
+					@* <p> <span class="text-warning "> >></span> Chốt điểm đến 23h59 ngày 01/07/2025 : <span class="text-warning fw-bold">1.5 đ</span></p> *@
 					<div id="historyContent" style="max-height: 400px; overflow-y: auto;">
 						<p>Đang tải lịch sử...</p>
 					</div>
@@ -350,17 +350,14 @@
 		}
 
 		// Function to load history data based on current modal filter settings
-		function loadHistoryData(userId, userName) {
+				function loadHistoryData(userId, userName) {
 			$("#historyContent").html("<p>Đang tải lịch sử...</p>"); // Show loading state
 
-			// Get dates from the modal's input fields
 			const fromDateVal = $('#historyFromDate').val();
 			const toDateVal = $('#historyToDate').val();
 
-			// Construct date parameters for API
 			const params = new URLSearchParams({ userId });
 
-			// Only append if dates are actually selected
 			if (fromDateVal) {
 				params.append("fromDate", `${fromDateVal}T00:00:00`);
 			}
@@ -377,38 +374,68 @@
 						return;
 					}
 
-					let html = ''; // Start with an empty string as the user name is in the title
-
-					// Display each transaction
+					// Group transactions by date (YYYY-MM-DD)
+					const grouped = {};
 					data.forEach(tran => {
-						const isSender = tran.proposeUsername === userName;
-						const amount = isSender ? tran.point : -tran.point;
+						const dateKey = new Date(tran.dateTime).toISOString().split('T')[0]; // e.g., "2025-07-05"
+						if (!grouped[dateKey]) grouped[dateKey] = [];
+						grouped[dateKey].push(tran);
+					});
 
-						const pointText = amount > 0
-							? `<span class="text-primary fw-bold">+${amount}</span>`
-							: `<span class="text-danger fw-bold">${amount}</span>`;
+					let html = '';
 
-						const counterParty = isSender ? tran.receiveUsername : tran.proposeUsername;
+					// Sort dates descending
+					const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
 
-						// Format datetime to Vietnamese locale
-						const transactionDateTime = new Date(tran.dateTime).toLocaleString('vi-VN', {
-							day: '2-digit',
-							month: '2-digit',
-							year: 'numeric',
-							hour: '2-digit',
-							minute: '2-digit',
-							hour12: false // Use 24-hour format
-						});
+					sortedDates.forEach(dateKey => {
+						const dailyTransactions = grouped[dateKey];
 
-						const calendarText = ((tran.calendar1 || '') + (tran.calendar2 || '')).trim() || '[Không có]';
+						// Calculate daily total points (positive if user is sender, negative if receiver)
+						let dailyTotal = 0;
+						let dayHtml = '';
 
-						html += `
+						dailyTransactions.forEach(tran => {
+							const isSender = tran.proposeUsername === userName;
+							const amount = isSender ? tran.point : -tran.point;
+							dailyTotal += amount;
+
+							const pointText = amount > 0
+								? `<span class="text-primary fw-bold">+${amount}</span>`
+								: `<span class="text-danger fw-bold">${amount}</span>`;
+
+							const counterParty = isSender ? tran.receiveUsername : tran.proposeUsername;
+
+							const transactionDateTime = new Date(tran.dateTime).toLocaleString('vi-VN', {
+								day: '2-digit',
+								month: '2-digit',
+								year: 'numeric',
+								hour: '2-digit',
+								minute: '2-digit',
+								hour12: false
+							});
+
+							const calendarText = ((tran.calendar1 || '') + (tran.calendar2 || '')).trim() || '[Không có]';
+
+							dayHtml += `
 								<div class="border rounded p-2 mb-3">
 									<p class="mb-1"><strong>${transactionDateTime}</strong> &nbsp; ${pointText}</p>
 									<p class="mb-1"><strong>${isSender ? 'Chuyển cho' : 'Nhận từ'}:</strong> ${counterParty}</p>
 									<p class="mb-1"><strong class="text-success">Lịch: </strong> ${calendarText}</p>
 								</div>`;
+						});
 
+						// Summary line
+						const dateDisplay = new Date(dateKey).toLocaleDateString('vi-VN', {
+							day: '2-digit',
+							month: '2-digit',
+							year: 'numeric',
+						});
+						const summaryLine = `
+							<p> <span class="text-warning">>></span>
+							Chốt điểm đến 23h59 ngày ${dateDisplay} :
+							<span class="text-warning fw-bold">${dailyTotal.toFixed(2)} đ</span></p>`;
+
+						html += summaryLine + dayHtml;
 					});
 
 					$("#historyContent").html(html);
@@ -418,6 +445,7 @@
 				}
 			});
 		}
+
 
 		// Event listener for the "Apply Filter" button inside the modal
 		$(document).on('click', '#applyHistoryFilterBtn', function () {

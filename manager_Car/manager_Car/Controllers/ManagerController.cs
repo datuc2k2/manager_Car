@@ -40,8 +40,7 @@ namespace manager_Car.Controllers
                     Point = 0
                 };
                 _carManagerContext.Add(u_create);
-				await _carManagerContext.SaveChangesAsync();
-			}
+            }
 
             using (var stream = new MemoryStream())
             {
@@ -128,20 +127,13 @@ namespace manager_Car.Controllers
 
                                     transactions.Add(transaction);
 
-                                    //                           var userAffected = users.FirstOrDefault(u => u.Name.Equals(usernameCellText, StringComparison.OrdinalIgnoreCase));
-                                    //                           if (userAffected != null)
-                                    //                           {
-                                    //                               userAffected.Point += pointValue;
-                                    //	_carManagerContext.Entry(userAffected).State = EntityState.Modified; 
-                                    //}
-                                    var userAffected = await _carManagerContext.Users
-        .FirstOrDefaultAsync(u => u.Name.ToLower() == usernameCellText.ToLower());
+                                    var userAffected = users.FirstOrDefault(u => u.Name.Equals(usernameCellText, StringComparison.OrdinalIgnoreCase));
                                     if (userAffected != null)
-									{
-										userAffected.Point += pointValue; // Cập nhật điểm
-										_carManagerContext.Entry(userAffected).State = EntityState.Modified; // Đánh dấu để lưu
-									}
-								}
+                                    {
+                                        userAffected.Point += pointValue;
+                                        _carManagerContext.Users.Update(userAffected);
+                                    }
+                                }
                                 catch (Exception ex)
                                 {
                                     return BadRequest($"Lỗi tại dòng {row}: {ex.Message}");
@@ -217,30 +209,14 @@ namespace manager_Car.Controllers
                                     transactions.Add(transaction);
 
                                     // Update points in-memory
-                                    //var sender = users.FirstOrDefault(u => u.Name.Equals(proposeUsername, StringComparison.OrdinalIgnoreCase));
-                                    //if (sender != null)
-                                    //    sender.Point += pointValue;
-
-
-                                    //var receiver = users.FirstOrDefault(u => u.Name.Equals(receiveUsername, StringComparison.OrdinalIgnoreCase));
-                                    //if (receiver != null)
-                                    //    receiver.Point -= pointValue;
-                                    var sender = await _carManagerContext.Users
-    .FirstOrDefaultAsync(u => u.Name.ToLower() == proposeUsername.ToLower());
+                                    var sender = users.FirstOrDefault(u => u.Name.Equals(proposeUsername, StringComparison.OrdinalIgnoreCase));
                                     if (sender != null)
-									{
-										sender.Point += pointValue;
-										_carManagerContext.Entry(sender).State = EntityState.Modified;
-									}
+                                        sender.Point += pointValue;
 
-									var receiver = await  _carManagerContext.Users
-    .FirstOrDefaultAsync(u => u.Name.ToLower() == proposeUsername.ToLower());
+                                    var receiver = users.FirstOrDefault(u => u.Name.Equals(receiveUsername, StringComparison.OrdinalIgnoreCase));
                                     if (receiver != null)
-									{
-										receiver.Point -= pointValue;
-										_carManagerContext.Entry(receiver).State = EntityState.Modified;
-									}
-								}
+                                        receiver.Point -= pointValue;
+                                }
                                 catch (Exception ex)
                                 {
                                     return BadRequest($"Lỗi tại dòng {row}/{row + 1}: {ex.Message}");
