@@ -44,18 +44,27 @@ namespace manager_Car.Controllers
                   AND (@toDate IS NULL OR t.date_time <= @toDate)
                 ORDER BY t.date_time DESC";
 
-                var parameters = new[]
-                {
-                    new SqlParameter("@userId", userId),
-                    new SqlParameter("@fromDate", (object?)fromDate ?? DBNull.Value),
-                    new SqlParameter("@toDate", (object?)toDate ?? DBNull.Value)
-                };
+            var parameters = new[]
+            {
+                new SqlParameter("@userId", userId),
+                new SqlParameter("@fromDate", (object?)fromDate ?? DBNull.Value),
+                new SqlParameter("@toDate", (object?)toDate ?? DBNull.Value)
+            };
 
             var transactions = await _carManagerContext.Transactions
                 .FromSqlRaw(sql, parameters)
                 .ToListAsync();
 
-            return Ok(transactions);
+            var user = await _carManagerContext.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                // Handle the case when user is not found
+                return NotFound($"User with ID {userId} not found.");
+            }
+
+
+            return Ok(new { transactions , user });
         }
 
     }

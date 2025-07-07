@@ -114,7 +114,7 @@ namespace manager_Car.Controllers
                                         continue;
                                     }
 
-                                    var calendarText = worksheet.Cells[row, 6].Text.Trim();
+                                    var calendarText = worksheet.Cells[row, 5].Text.Trim();
 
                                     var transaction = new Transaction
                                     {
