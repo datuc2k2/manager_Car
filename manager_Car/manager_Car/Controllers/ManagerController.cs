@@ -128,15 +128,15 @@ namespace manager_Car.Controllers
 
                                     transactions.Add(transaction);
 
-									//                           var userAffected = users.FirstOrDefault(u => u.Name.Equals(usernameCellText, StringComparison.OrdinalIgnoreCase));
-									//                           if (userAffected != null)
-									//                           {
-									//                               userAffected.Point += pointValue;
-									//	_carManagerContext.Entry(userAffected).State = EntityState.Modified; 
-									//}
-									var userAffected = await _carManagerContext.Users
-								.FirstOrDefaultAsync(u => u.Name.Equals(usernameCellText, StringComparison.OrdinalIgnoreCase));
-									if (userAffected != null)
+                                    //                           var userAffected = users.FirstOrDefault(u => u.Name.Equals(usernameCellText, StringComparison.OrdinalIgnoreCase));
+                                    //                           if (userAffected != null)
+                                    //                           {
+                                    //                               userAffected.Point += pointValue;
+                                    //	_carManagerContext.Entry(userAffected).State = EntityState.Modified; 
+                                    //}
+                                    var userAffected = await _carManagerContext.Users
+        .FirstOrDefaultAsync(u => u.Name.ToLower() == usernameCellText.ToLower());
+                                    if (userAffected != null)
 									{
 										userAffected.Point += pointValue; // Cập nhật điểm
 										_carManagerContext.Entry(userAffected).State = EntityState.Modified; // Đánh dấu để lưu
@@ -216,26 +216,26 @@ namespace manager_Car.Controllers
 
                                     transactions.Add(transaction);
 
-									// Update points in-memory
-									//var sender = users.FirstOrDefault(u => u.Name.Equals(proposeUsername, StringComparison.OrdinalIgnoreCase));
-									//if (sender != null)
-									//    sender.Point += pointValue;
+                                    // Update points in-memory
+                                    //var sender = users.FirstOrDefault(u => u.Name.Equals(proposeUsername, StringComparison.OrdinalIgnoreCase));
+                                    //if (sender != null)
+                                    //    sender.Point += pointValue;
 
 
-									//var receiver = users.FirstOrDefault(u => u.Name.Equals(receiveUsername, StringComparison.OrdinalIgnoreCase));
-									//if (receiver != null)
-									//    receiver.Point -= pointValue;
-									var sender = await _carManagerContext.Users
-								.FirstOrDefaultAsync(u => u.Name.Equals(proposeUsername, StringComparison.OrdinalIgnoreCase));
-									if (sender != null)
+                                    //var receiver = users.FirstOrDefault(u => u.Name.Equals(receiveUsername, StringComparison.OrdinalIgnoreCase));
+                                    //if (receiver != null)
+                                    //    receiver.Point -= pointValue;
+                                    var sender = await _carManagerContext.Users
+    .FirstOrDefaultAsync(u => u.Name.ToLower() == proposeUsername.ToLower());
+                                    if (sender != null)
 									{
 										sender.Point += pointValue;
 										_carManagerContext.Entry(sender).State = EntityState.Modified;
 									}
 
-									var receiver = await _carManagerContext.Users
-										.FirstOrDefaultAsync(u => u.Name.Equals(receiveUsername, StringComparison.OrdinalIgnoreCase));
-									if (receiver != null)
+									var receiver = await  _carManagerContext.Users
+    .FirstOrDefaultAsync(u => u.Name.ToLower() == proposeUsername.ToLower());
+                                    if (receiver != null)
 									{
 										receiver.Point -= pointValue;
 										_carManagerContext.Entry(receiver).State = EntityState.Modified;
