@@ -372,21 +372,57 @@
 				grouped[dateKey].push(tran);
 			});
 
-			const sortedDates = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b)); // Ascending
+			const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a)); // Ascending
 
 			// Recalculate currentTotal based on filtered data
-			let recalculatedTotal = user.point || 0;
-			for (const tran of filtered) {
-				const isSender = tran.proposeUsername === user.name;
-				const amount = isSender ? tran.point : -tran.point;
-				recalculatedTotal += amount;
-			}
-			let currentTotal = recalculatedTotal;
+			//Code của Đại
+			// let recalculatedTotal = user.point || 0;
+			// for (const tran of filtered) {
+			// 	const isSender = tran.proposeUsername === user.name;
+			// 	const amount = isSender ? tran.point : -tran.point;
+			// 	recalculatedTotal += amount;
+			// }
+			// let currentTotal = recalculatedTotal;
 
-			// Now render each day from latest to oldest
-			sortedDates.reverse(); // Descending for display
+			// // Now render each day from latest to oldest
+			// sortedDates.reverse(); // Descending for display
 
+			// let html = '';
+			// for (const dateKey of sortedDates) {
+			// 	const dailyTransactions = grouped[dateKey];
+			// 	let dailyChange = 0;
+			// 	let dayHtml = '';
+
+			// 	dailyTransactions.forEach(tran => {
+			// 		const isSender = tran.proposeUsername === user.name;
+			// 		const amount = isSender ? tran.point : -tran.point;
+			// 		dailyChange += amount;
+
+			// 		const pointText = amount > 0
+			// 			? `<span class="text-primary fw-bold">+${amount}</span>`
+			// 			: `<span class="text-danger fw-bold">${amount}</span>`;
+
+			// 		const counterParty = isSender ? tran.receiveUsername : tran.proposeUsername;
+			// 		const dateTime = new Date(tran.dateTime).toLocaleString('vi-VN', {
+			// 			day: '2-digit', month: '2-digit', year: 'numeric',
+			// 			hour: '2-digit', minute: '2-digit', hour12: false
+			// 		});
+
+			// 		const calendarText = ((tran.calendar1 || '') + (tran.calendar2 || '')).trim() || '[Không có]';
+
+			// 		dayHtml += `
+			// 			<div class="border rounded p-2 mb-3">
+			// 				<p class="mb-1"><strong>${dateTime}</strong> &nbsp; ${pointText}</p>
+			// 				<p class="mb-1"><strong>${isSender ? 'Chuyển cho' : 'Nhận từ'}:</strong> ${counterParty}</p>
+			// 				<p class="mb-1"><strong class="text-success">Lịch: </strong> ${calendarText}</p>
+			// 			</div>`;
+			// 	});
+
+			//Code của Đạt
+			let currentTotal = user.point || 0;
 			let html = '';
+
+			// Process each day from latest to oldest
 			for (const dateKey of sortedDates) {
 				const dailyTransactions = grouped[dateKey];
 				let dailyChange = 0;
@@ -394,7 +430,7 @@
 
 				dailyTransactions.forEach(tran => {
 					const isSender = tran.proposeUsername === user.name;
-					const amount = isSender ? tran.point : -tran.point;
+					const amount = isSender ? tran.point : -tran.point; 
 					dailyChange += amount;
 
 					const pointText = amount > 0
@@ -411,7 +447,7 @@
 
 					dayHtml += `
 						<div class="border rounded p-2 mb-3">
-							<p class="mb-1"><strong>${dateTime}</strong> &nbsp; ${pointText}</p>
+							<p class="mb-1"><strong>${dateTime}</strong>   ${pointText}</p>
 							<p class="mb-1"><strong>${isSender ? 'Chuyển cho' : 'Nhận từ'}:</strong> ${counterParty}</p>
 							<p class="mb-1"><strong class="text-success">Lịch: </strong> ${calendarText}</p>
 						</div>`;
