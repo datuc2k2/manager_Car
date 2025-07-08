@@ -375,7 +375,7 @@
 			const sortedDates = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b)); // Ascending
 
 			// Recalculate currentTotal based on filtered data
-			let recalculatedTotal = user.point || 0;;
+			let recalculatedTotal = user.point || 0;
 			for (const tran of filtered) {
 				const isSender = tran.proposeUsername === user.name;
 				const amount = isSender ? tran.point : -tran.point;
