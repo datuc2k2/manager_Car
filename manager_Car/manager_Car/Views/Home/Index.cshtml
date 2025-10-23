@@ -367,13 +367,14 @@
 			// Group by date
 			const grouped = {};
 			filtered.forEach(tran => {
-				const dateKey = new Date(tran.dateTime).toISOString().split('T')[0];
+				const dateObj = new Date(tran.dateTime);
+				const dateKey = dateObj.toLocaleDateString('en-CA'); // format: YYYY-MM-DD in local time
 				if (!grouped[dateKey]) grouped[dateKey] = [];
 				grouped[dateKey].push(tran);
 			});
 
-			const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a)); // Ascending
 
+			const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a)); // Ascending
 			// Recalculate currentTotal based on filtered data
 			//Code của Đại
 			// let recalculatedTotal = user.point || 0;
@@ -427,9 +428,9 @@
 				const dailyTransactions = grouped[dateKey];
 				let dailyChange = 0;
 				let dayHtml = '';
-
 				dailyTransactions.forEach(tran => {
-					const isSender = tran.proposeUsername === user.name;
+					const isSender =
+							tran.proposeUsername.trim().toLowerCase() === user.name.trim().toLowerCase();
 					const amount = isSender ? tran.point : -tran.point; 
 					dailyChange += amount;
 
