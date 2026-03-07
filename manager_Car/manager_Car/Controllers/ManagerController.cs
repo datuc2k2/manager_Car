@@ -52,7 +52,7 @@ namespace manager_Car.Controllers
 
                     string checkImport = worksheet.Cells[3, 1].Text.ToLower().Trim();
 
-                    string dateText = "1/7";
+                    DateTime date = new DateTime();
                     var users = await _carManagerContext.Users.ToListAsync();
                     var userNames = users.Select(u => u.Name.ToLower().Trim()).ToHashSet();
 
@@ -69,7 +69,10 @@ namespace manager_Car.Controllers
                                 try
                                 {
                                     if (row == 2 && !string.IsNullOrEmpty(worksheet.Cells[row, 1].Text.Trim()))
-                                        dateText = worksheet.Cells[row, 1].Text.Trim();
+                                    {
+                                        date = worksheet.Cells[row, 1].GetValue<DateTime>();
+                                    }
+                                    string dateText = date.ToString("d/M/yyyy");
 
                                     var usernameCellText = worksheet.Cells[row, 3].Text.Trim();
                                     var pointText = worksheet.Cells[row, 4].Text.Trim();
@@ -169,7 +172,10 @@ namespace manager_Car.Controllers
                                     }
 
                                     if (row == 2 && !string.IsNullOrEmpty(worksheet.Cells[row, 1].Text.Trim()))
-                                        dateText = worksheet.Cells[row, 1].Text.Trim();
+                                    {
+                                        date = worksheet.Cells[row, 1].GetValue<DateTime>();
+                                    }
+                                    string dateText = date.ToString("d/M/yyyy");
 
                                     var proposeUsername = proposeUsernameCheck;
                                     var pointText = pointTextCheck;
@@ -244,28 +250,50 @@ namespace manager_Car.Controllers
 
         private DateTime ParseDateTimeWithTime(string dateText, string timeText)
         {
-            DateTime dateOnly;
-            TimeSpan timeOnly;
-
-            // Parse "1/7" → 1 July
-            if (!DateTime.TryParseExact(dateText, "d/M", CultureInfo.InvariantCulture, DateTimeStyles.None, out dateOnly))
-                dateOnly = DateTime.Now.Date;
-
-            // Normalize "18h26" or "9:14"
+            // Normalize time: "18h26" → "18:26"
             string normalizedTime = timeText.Replace("h", ":");
 
-            // Combine "1/7" + "18:26"
-            string fullDateTime = $"{dateText} {normalizedTime}";
-            DateTime finalDateTime;
-
-            if (!DateTime.TryParseExact(fullDateTime, new[] { "d/M H:mm", "d/M HH:mm", "d/M H:m", "d/M HH:m" },
-                CultureInfo.InvariantCulture, DateTimeStyles.None, out finalDateTime))
+            // Possible datetime formats
+            string[] formats =
             {
-                finalDateTime = DateTime.Now; // fallback
+                "d/M H:mm",
+                "d/M HH:mm",
+                "d/M/yyyy H:mm",
+                "d/M/yyyy HH:mm",
+                "d/M H:m",
+                "d/M HH:m",
+                "d/M/yyyy H:m",
+                "d/M/yyyy HH:m"
+            };
+
+            // If date has no year → append current year
+            if (!dateText.Contains("/"))
+            {
+                // should never happen, but safety
+                dateText = DateTime.Now.ToString("d/M/yyyy");
+            }
+            else if (dateText.Count(c => c == '/') == 1)
+            {
+                // d/M → add current year
+                dateText = $"{dateText}/{DateTime.Now.Year}";
             }
 
-            return finalDateTime;
+            string fullDateTime = $"{dateText} {normalizedTime}";
+
+            if (DateTime.TryParseExact(
+                fullDateTime,
+                formats,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out DateTime result))
+            {
+                return result;
+            }
+
+            // Fallback
+            return DateTime.Now;
         }
+
 
         [HttpDelete("delete-transactions")]
         public async Task<IActionResult> DeleteTransactionsByDate([FromQuery] string dateText)

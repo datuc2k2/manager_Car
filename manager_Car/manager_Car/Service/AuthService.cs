@@ -15,8 +15,8 @@ namespace manager_Car.Service
         public async Task<string> Login(AdminLoginModel adminLoginModel)
         {
             // Fix username password
-            string u = "administrator";
-            string p = "administrator";
+            string u = "flashcar.304";//"administrator";
+            string p = "flashcar.304";//"administrator";
             bool isValid = adminLoginModel.user_name == u && adminLoginModel.user_password == p;
 
             if (!isValid)
