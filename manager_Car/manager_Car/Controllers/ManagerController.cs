@@ -320,19 +320,25 @@ namespace manager_Car.Controllers
             }
             var list_user = await _carManagerContext.Users.ToListAsync();
             var userDict = list_user
-                        .GroupBy(u => u.Name)
+                        .Where(u => !string.IsNullOrEmpty(u.Name))
+                        .GroupBy(u => u.Name.ToLower().Trim()) // Normalize key
                         .ToDictionary(g => g.Key, g => g.First());
 
             foreach (var trans in transactionDeletes)
             {
-                if (trans.ProposeUsername != "FLASHCAR" && userDict.TryGetValue(trans.ProposeUsername, out var pUser))
+                var pName = trans.ProposeUsername?.ToLower().Trim();
+                var rName = trans.ReceiveUsername?.ToLower().Trim();
+
+                // 3. Handle Proposer (Undo: give points BACK)
+                if (pName != "flashcar" && !string.IsNullOrEmpty(pName) && userDict.TryGetValue(pName, out var pUser))
                 {
-                    pUser.Point -= trans.Point;
+                    pUser.Point += trans.Point; // Reversed to += to undo a spend
                 }
 
-                if (trans.ReceiveUsername != "FLASHCAR" && userDict.TryGetValue(trans.ReceiveUsername, out var rUser))
+                // 4. Handle Receiver (Undo: take points AWAY)
+                if (rName != "flashcar" && !string.IsNullOrEmpty(rName) && userDict.TryGetValue(rName, out var rUser))
                 {
-                    rUser.Point += trans.Point;
+                    rUser.Point -= trans.Point; // Reversed to -= to undo a receipt
                 }
             }
 
